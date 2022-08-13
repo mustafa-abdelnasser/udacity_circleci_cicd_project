@@ -9,10 +9,15 @@ jobs:
       - restore_cache:
           keys: [frontend-build]
       - run:
-          name: Build front-end
+          name: Install front-end Build dependencies
           command: |
             cd frontend
             npm install
+            ls node_modules
+      - run:
+          name: Build front-end
+          command: |
+            pwd
             npm run build
             echo "frontend compiled files"
             ls dist
@@ -50,6 +55,7 @@ jobs:
           name: Test front-end
           command: |
             cd frontend
+            ls node_modules
             npm test
   test-backend:
     docker:
@@ -75,11 +81,14 @@ jobs:
           name: Front-end Scan
           command: |
             cd frontend
+            ls node_modules
             npm audit --audit-level=critical
       - run:
           name: Fix Front-end code if Scan Fails
           when: on_fail
           command: |
+            pwd
+            cd frontend
             npm audit fix --audit-level=critical --force
 
   scan-backend:
@@ -98,6 +107,8 @@ jobs:
           name: Fix Back-end code if Scan Fails
           when: on_fail
           command: |
+            pwd
+            cd backend
             npm audit fix --audit-level=critical --force
 workflows:
   udapeople:
