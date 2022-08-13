@@ -70,12 +70,17 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys: [frontend-build]
       - run:
           name: Front-end Scan
           command: |
             cd frontend
             npm audit --audit-level=critical
+      - run:
+          name: Fix Front-end code if Scan Fails
+          when: on_fail
+          command: |
+            npm audit fix --audit-level=critical --force
 
   scan-backend:
     docker:
@@ -89,7 +94,11 @@ jobs:
           command: |
             cd backend
             npm audit --audit-level=critical
-
+      - run:
+          name: Fix Back-end code if Scan Fails
+          when: on_fail
+          command: |
+            npm audit fix --audit-level=critical --force
 workflows:
   udapeople:
     jobs:
