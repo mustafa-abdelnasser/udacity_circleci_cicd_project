@@ -18,6 +18,7 @@ jobs:
           name: Build front-end
           command: |
             pwd
+            cd frontend
             npm run build
             echo "frontend compiled files"
             ls dist
