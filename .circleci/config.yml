@@ -100,17 +100,11 @@ jobs:
       - restore_cache:
           keys: [backend-build]
       - run:
-          name: Back-end Scan
+          name: Back-end Scan with force fix
           command: |
-            cd backend
-            npm audit --audit-level=critical
-      - run:
-          name: Fix Back-end code if Scan Fails
-          when: on_fail
-          command: |
-            pwd
             cd backend
             npm audit fix --audit-level=critical --force
+
 workflows:
   udapeople:
     jobs:
