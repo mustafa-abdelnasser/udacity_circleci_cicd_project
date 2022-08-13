@@ -1,6 +1,19 @@
 version: 2.1
+orbs:
+  slack: circleci/slack@4.9.3
 
 jobs:
+  notify:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - slack/notify:
+          event: pass
+          template: success_tagged_deploy_1
+
   build-frontend:
     docker:
       - image: circleci/node:13.8.0
@@ -104,6 +117,8 @@ jobs:
 workflows:
   udapeople:
     jobs:
+      - notify:
+          context: slack-secret
       - build-frontend
       - build-backend
       - test-frontend:
