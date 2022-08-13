@@ -7,7 +7,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: [frontend-build2]
       - run:
           name: Install front-end Build dependencies
           command: |
@@ -24,7 +24,7 @@ jobs:
             ls dist
       - save_cache:
           paths: [frontend/node_modules]
-          key: frontend-build
+          key: frontend-build2
 
   build-backend:
     docker:
@@ -51,7 +51,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: [frontend-build2]
       - run:
           name: Test front-end
           command: |
@@ -77,7 +77,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: [frontend-build2]
       - run:
           name: Front-end Scan
           command: |
