@@ -14,6 +14,7 @@ jobs:
             cd frontend
             npm install
             npm run build
+            echo "frontend compiled files"
             ls dist
       - save_cache:
           paths: [frontend/node_modules]
@@ -32,6 +33,8 @@ jobs:
              cd backend
              npm install
              npm run build
+             echo "backend compiled files"
+             ls dist
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
@@ -61,6 +64,31 @@ jobs:
              cd backend
              npm test
 
+  scan-frontend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Front-end Scan
+          command: |
+            cd frontend
+            npm audit --audit-level=critical
+
+  scan-backend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Back-end Scan
+          command: |
+            cd backend
+            npm audit --audit-level=critical
 
 workflows:
   udapeople:
