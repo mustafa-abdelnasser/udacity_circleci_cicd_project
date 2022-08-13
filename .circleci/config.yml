@@ -7,13 +7,12 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build2]
+          keys: [frontend-build]
       - run:
           name: Install front-end Build dependencies
           command: |
             cd frontend
             npm install
-            ls node_modules
       - run:
           name: Build front-end
           command: |
@@ -23,8 +22,8 @@ jobs:
             echo "frontend compiled files"
             ls dist
       - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build2
+          paths: [frontend/node_modules,frontend/package-lock.json]
+          key: frontend-build
 
   build-backend:
     docker:
@@ -42,7 +41,7 @@ jobs:
              echo "backend compiled files"
              ls dist
       - save_cache:
-          paths: [backend/node_modules]
+          paths: [backend/node_modules,backend/package-lock.json]
           key: backend-build
 
   test-frontend:
@@ -51,12 +50,11 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build2]
+          keys: [frontend-build]
       - run:
           name: Test front-end
           command: |
             cd frontend
-            ls node_modules
             npm test
   test-backend:
     docker:
@@ -77,19 +75,12 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build2]
+          keys: [frontend-build]
       - run:
-          name: Front-end Scan
+          name: Front-end Scan with force fix
           command: |
             cd frontend
             ls node_modules
-            npm audit --audit-level=critical
-      - run:
-          name: Fix Front-end code if Scan Fails
-          when: on_fail
-          command: |
-            pwd
-            cd frontend
             npm audit fix --audit-level=critical --force
 
   scan-backend:
