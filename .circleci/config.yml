@@ -7,7 +7,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: 
+           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
       - run:
           name: Install front-end Build dependencies
           command: |
@@ -22,8 +23,10 @@ jobs:
             echo "frontend compiled files"
             ls dist
       - save_cache:
-          paths: [frontend/node_modules,frontend/package-lock.json]
-          key: frontend-build
+          paths:
+            - frontend/node_modules
+            - frontend/package-lock.json
+          key: frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
 
   build-backend:
     docker:
@@ -50,7 +53,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: 
+           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
       - run:
           name: Test front-end
           command: |
@@ -75,7 +79,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: 
+           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
       - run:
           name: Front-end Scan with force fix
           command: |
