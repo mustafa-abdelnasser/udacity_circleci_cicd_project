@@ -35,9 +35,8 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build001
+      - restore_cache:
+          keys: [frontend-build]
       - run:
           name: Test front-end
           command: |
@@ -49,15 +48,17 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build001
+      - restore_cache:
+          keys: [frontend-build]
       - run:
           name: Front-end Scan with force fix
           command: |
             cd frontend
             ls node_modules
-            npm audit fix --audit-level=critical --force
+            npm audit --audit-level=critical
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: frontend-build001
 
   build-backend:
     docker:
@@ -109,7 +110,7 @@ jobs:
           name: Back-end Scan with force fix
           command: |
             cd backend
-            npm audit fix --audit-level=critical --force
+            npm audit --audit-level=critical
 
 
 workflows:
