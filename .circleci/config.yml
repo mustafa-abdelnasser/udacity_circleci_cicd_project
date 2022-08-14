@@ -8,9 +8,6 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - restore_cache:
-          keys: 
-           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
       - run:
           name: Install Dependencies and Build Frontend
           command: |
