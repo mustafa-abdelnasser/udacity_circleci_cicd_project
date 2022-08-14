@@ -12,26 +12,55 @@ jobs:
           keys: 
            - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
       - run:
-          name: Install front-end Build dependencies
+          name: Install Dependencies and Build Frontend
           command: |
             cd frontend
+            echo "Install Dependencies"
             npm install
-      - run:
-          name: Build front-end
-          command: |
-            pwd
-            cd frontend
+            echo "Build frontend"
             npm run build
             echo "frontend compiled files"
             ls dist
       - save_cache:
           paths:
             - frontend/node_modules
-            - frontend/package-lock.json
           key: frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
       - slack/notify:
           event: fail
           template: basic_fail_1
+      - slack/notify:
+          event: pass
+          template: success_tagged_deploy_1
+
+  test-frontend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys: 
+           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
+      - run:
+          name: Test front-end
+          command: |
+            cd frontend
+            npm test
+
+  scan-frontend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys: 
+           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
+      - run:
+          name: Front-end Scan with force fix
+          command: |
+            cd frontend
+            ls node_modules
+            npm audit fix --audit-level=critical --force
+            npm audit --audit-level=critical
 
   build-backend:
     docker:
@@ -49,22 +78,16 @@ jobs:
              echo "backend compiled files"
              ls dist
       - save_cache:
-          paths: [backend/node_modules,backend/package-lock.json]
+          paths: 
+            - backend/node_modules
           key: backend-build
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - slack/notify:
+          event: pass
+          template: success_tagged_deploy_1
 
-  test-frontend:
-    docker:
-      - image: circleci/node:13.8.0
-    steps:
-      - checkout
-      - restore_cache:
-          keys: 
-           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
-      - run:
-          name: Test front-end
-          command: |
-            cd frontend
-            npm test
   test-backend:
     docker:
       - image: circleci/node:13.8.0
@@ -78,21 +101,6 @@ jobs:
              cd backend
              npm test
 
-  scan-frontend:
-    docker:
-      - image: circleci/node:13.8.0
-    steps:
-      - checkout
-      - restore_cache:
-          keys: 
-           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
-      - run:
-          name: Front-end Scan with force fix
-          command: |
-            cd frontend
-            ls node_modules
-            npm audit fix --audit-level=critical --force
-
   scan-backend:
     docker:
       - image: circleci/node:13.8.0
@@ -105,6 +113,8 @@ jobs:
           command: |
             cd backend
             npm audit fix --audit-level=critical --force
+            npm audit --audit-level=critical
+
 
 workflows:
   udapeople:
