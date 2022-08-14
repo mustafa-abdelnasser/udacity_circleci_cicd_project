@@ -8,6 +8,8 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
+      - restore_cache:
+          keys: [frontend-build]
       - run:
           name: Install Dependencies and Build Frontend
           command: |
@@ -19,9 +21,8 @@ jobs:
             echo "frontend compiled files"
             ls dist
       - save_cache:
-          paths:
-            - frontend/node_modules
-          key: frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
+          paths: [frontend/node_modules]
+          key: frontend-build001
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -34,9 +35,9 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - restore_cache:
-          keys: 
-           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: frontend-build001
       - run:
           name: Test front-end
           command: |
@@ -48,16 +49,15 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - restore_cache:
-          keys: 
-           - frontend-build-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: frontend-build001
       - run:
           name: Front-end Scan with force fix
           command: |
             cd frontend
             ls node_modules
             npm audit fix --audit-level=critical --force
-            npm audit --audit-level=critical
 
   build-backend:
     docker:
@@ -110,7 +110,6 @@ jobs:
           command: |
             cd backend
             npm audit fix --audit-level=critical --force
-            npm audit --audit-level=critical
 
 
 workflows:
