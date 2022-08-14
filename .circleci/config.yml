@@ -9,7 +9,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: 
+            - frontend-build002
       - run:
           name: Install Dependencies and Build Frontend
           command: |
@@ -21,8 +22,10 @@ jobs:
             echo "frontend compiled files"
             ls dist
       - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build001
+          paths: 
+            - frontend/node_modules
+            - frontend/dist
+          key: frontend-build002
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -36,7 +39,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: 
+            - frontend-build002
       - run:
           name: Test front-end
           command: |
@@ -49,16 +53,16 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: 
+            - frontend-build002
       - run:
           name: Front-end Scan with force fix
           command: |
             cd frontend
-            ls node_modules
+            npm install
+            npm audit fix --audit-level=critical --force
             npm audit --audit-level=critical
-      - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build001
+
 
   build-backend:
     docker:
@@ -66,7 +70,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys:
+            - backend-build002
       - run:
           name: Back-end build
           command: |
@@ -78,7 +83,8 @@ jobs:
       - save_cache:
           paths: 
             - backend/node_modules
-          key: backend-build
+            - backend/dist
+          key: backend-build002
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -92,7 +98,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys:
+            - backend-build002
       - run:
           name: Back-end Test
           command: |
@@ -105,11 +112,13 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys:
+            - backend-build002
       - run:
           name: Back-end Scan with force fix
           command: |
             cd backend
+            npm audit fix --audit-level=critical --force
             npm audit --audit-level=critical
 
 
