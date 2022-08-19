@@ -13,16 +13,22 @@
     - ansible_stdout_callback: yaml
 
   pre_tasks:
-    - name: "wait 600 seconds for target connection to become reachable/usable."
-      # Your code here
-
-    - name: "install python for Ansible."
-      # Your code here
+    - name: "wait till ssh connection to become reachable."
+      ansible.builtin.wait_for:
+        port: 22
+        delay: 10
 
   # Get the environment variables from CircleCI and add to the EC2 instance
   environment:
     - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"  
-    # Add more env vars here
+    - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
+    - TYPEORM_PORT: "{{ lookup('env', 'TYPEORM_PORT')}}"
+    - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
+    - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
+    - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
+    - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"
+    - TYPEORM_ENTITIES: "{{ lookup('env', 'TYPEORM_ENTITIES')}}"
+    - TYPEORM_MIGRATIONS: "{{ lookup('env', 'TYPEORM_MIGRATIONS')}}"
 
   roles:
-    # Your code here
+    - configure-server

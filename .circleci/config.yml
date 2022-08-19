@@ -2,6 +2,20 @@ version: 2.1
 orbs:
   slack: circleci/slack@4.9.3
 
+commands:
+  destroy-environment:
+    description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
+    parameters:
+      parameter1:
+        type: string
+    steps:
+      - run:
+          name: Destroy environments
+          when: on_fail
+          command: |
+            aws cloudformation delete-stack --stack-name UdaPeople-Backend-${CIRCLE_WORKFLOW_ID}
+            aws cloudformation delete-stack --stack-name UdaPeople-Frontend-${CIRCLE_WORKFLOW_ID}
+
 jobs:
   build-frontend:
     docker:
@@ -123,6 +137,78 @@ jobs:
             npm update mkdirp --depth 2
             npm audit --audit-level=critical
 
+  deploy-infrastructure:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Ensure back-end infrastructure exists
+          command: |
+            aws cloudformation deploy \
+              --template-file .circleci/files/backend.yml \
+              --tags project=UdaPeople-project-backend \
+              --stack-name UdaPeople-Backend-${CIRCLE_WORKFLOW_ID} \
+              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID}
+          no_output_timeout: 20m
+      - run:
+          name: Ensure front-end infrastructure exist
+          command: |
+            aws cloudformation deploy \
+              --template-file .circleci/files/frontend.yml \
+              --tags project=UdaPeople-project-frontend \
+              --stack-name UdaPeople-Frontend-${CIRCLE_WORKFLOW_ID} \
+              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID}
+          no_output_timeout: 20m
+      - run:
+          name: Install dependencies
+          command: |
+            yum install -y openssh-client ca-certificates tar gzip git curl wget
+      - run:
+          name: Add back-end ip to ansible inventory
+          command: |
+            pwd
+            ec2TagValue="backend-${CIRCLE_WORKFLOW_ID}"
+            aws ec2 describe-instances \
+              --query 'Reservations[*].Instances[*].PublicDnsName' \
+              --filters "Name=tag:Name,Values=$ec2TagValue" \
+              --output text >> .circleci/ansible/inventory.txt
+            cat .circleci/ansible/inventory.txt
+      - run:
+          name: get backend server url
+          command: |
+            ec2TagValue="backend-${CIRCLE_WORKFLOW_ID}"
+            aws ec2 describe-instances \
+              --query 'Reservations[*].Instances[*].PublicDnsName' \
+              --filters "Name=tag:Name,Values=$ec2TagValue" \
+              --output text > backend-domain-${CIRCLE_WORKFLOW_ID}.txt
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/.circleci/ansible/inventory.txt
+            - project/backend-domain-${CIRCLE_WORKFLOW_ID}.txt
+      - destroy-environment
+
+  configure-infrastructure:
+    docker:
+      - image: circleci/python:3.9
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "18:ba:cd:60:8d:69:42:2c:e7:e1:bd:c2:77:21:7d:2a"
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Install dependencies
+          command: |
+            pip install ansible
+      - run:
+          name: Configure server
+          command: |
+            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
+      #ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
+      # Here's where you will add some code to rollback on failure   
 
 workflows:
   udapeople:
@@ -139,3 +225,7 @@ workflows:
           requires: [build-frontend]
       - scan-backend:
           requires: [build-backend]
+      - deploy-infrastructure:
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+      - configure-infrastructure:
+          requires: [deploy-infrastructure]

@@ -1,0 +1,28 @@
+---
+- name: "update apt cache."
+  become: true
+  apt:
+    update_cache: yes
+
+- name: "upgrade packages"
+  become: true
+  apt:
+    upgrade: yes
+
+- name : "set up node as web server"
+  become: true
+  become_method: sudo
+  become_user: root
+  apt:
+    name: ["nodejs","npm"]
+    state: present
+    update_cache: yes
+
+
+- name: "install pm2"
+  become: true
+  npm:
+    name: pm2
+    global: yes
+    production: yes
+    state: present
