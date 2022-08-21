@@ -210,6 +210,16 @@ jobs:
           paths:
             - project/.circleci/ansible/inventory.txt
             - project/backend-domain-${CIRCLE_WORKFLOW_ID}.txt
+      - run:
+          name: Save backend server url to AWS SSM
+          command: |
+            ec2TagValue="backend-${CIRCLE_WORKFLOW_ID}"
+            BACKEND_URL=$(aws ec2 describe-instances \
+              --query 'Reservations[*].Instances[*].PublicDnsName' \
+              --filters "Name=tag:Name,Values=$ec2TagValue" \
+              --output text)
+            aws ssm put-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID} \
+              --type "String" --tier Standard --value $BACKEND_URL
       - destroy-environment
 
   configure-infrastructure:
@@ -290,9 +300,6 @@ workflows:
           requires: [build-backend]
       - deploy-infrastructure:
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-          filters:
-            branches:
-              only: [test-feature-branch]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
       - run-migrations:
