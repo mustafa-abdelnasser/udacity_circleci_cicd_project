@@ -15,22 +15,21 @@ commands:
 
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
-    parameters:
-      parameter2:
-        type: string 
     steps:
       - run:
           name: Revert migrations
           when: on_fail
           command: |
-            # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
-            SUCCESS = 1
-            if(( $SUCCESS==1 )); 
-            then
-            #  cd ~/project/backend
-            #  npm install
-            #  Add revert code here. You can find this in the Getting Started section.
-              exit 1
+            # get migration status from AWS SSM Parameter store
+            MIGRATION_STATUS=$(aws ssm get-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
+
+            if [ $MIGRATION_STATUS == 'FAIL' ]
+              then
+                echo "Migration FAILED, Revert Migration"
+                cd ~/project/backend
+                npm install
+                npm run migrations:revert
+                exit 1
             fi
 
 jobs:
@@ -224,7 +223,7 @@ jobs:
       - attach_workspace:
           at: ~/project
       - run:
-          name: Install dependencies
+          name: Install ansible
           command: |
             pip install ansible
       - run:
@@ -253,23 +252,26 @@ jobs:
             cat migration_output.log
             grep "has been executed successfully" migration_output.log
       - run:
-          name: save migration results to memstash
+          name: Install aws cli
+          command: |
+            cd /tmp
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+      - run:
+          name: save migration results to aws ssm parameter store
           command: |
             cd backend
             grep "has been executed successfully" migration_output.log
             if [ $? -eq 0 ]
               then
                 echo "migration_${CIRCLE_WORKFLOW_ID} SUCCESS"
-                echo "migration_${CIRCLE_WORKFLOW_ID} SUCCESS" >> migration_restult.txt
+                aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "SUCCESS"
               else
                 echo "migration_${CIRCLE_WORKFLOW_ID} Fail"
-                echo "migration_${CIRCLE_WORKFLOW_ID} Fail" >> migration_restult.txt
+                aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "FAIL"
                 exit 1
             fi
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - project/backend/migration_restult.txt
       - revert-migrations
 workflows:
   udapeople:
