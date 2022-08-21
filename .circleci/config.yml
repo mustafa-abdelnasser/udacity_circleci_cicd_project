@@ -13,6 +13,26 @@ commands:
             aws cloudformation delete-stack --stack-name UdaPeople-Backend-${CIRCLE_WORKFLOW_ID}
             aws cloudformation delete-stack --stack-name UdaPeople-Frontend-${CIRCLE_WORKFLOW_ID}
 
+  revert-migrations:
+    description: Revert the last migration if successfully run in the current workflow.
+    parameters:
+      parameter2:
+        type: string 
+    steps:
+      - run:
+          name: Revert migrations
+          when: on_fail
+          command: |
+            # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
+            SUCCESS = 1
+            if(( $SUCCESS==1 )); 
+            then
+            #  cd ~/project/backend
+            #  npm install
+            #  Add revert code here. You can find this in the Getting Started section.
+              exit 1
+            fi
+
 jobs:
   build-frontend:
     docker:
@@ -23,20 +43,27 @@ jobs:
           keys: 
             - frontend-build002
       - run:
-          name: Install Dependencies and Build Frontend
+          name: Install Frontend Dependencies
           command: |
             cd frontend
             echo "Install Dependencies"
             npm install
+      - save_cache:
+          paths: 
+            - frontend/node_modules
+          key: frontend-build002
+      - run:
+          name: Build Frontend
+          command: |
+            cd frontend
             echo "Build frontend"
             npm run build
             echo "frontend compiled files"
             ls dist
-      - save_cache:
-          paths: 
-            - frontend/node_modules
-            - frontend/dist
-          key: frontend-build002
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/frontend/dist
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -193,7 +220,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "18:ba:cd:60:8d:69:42:2c:e7:e1:bd:c2:77:21:7d:2a"
+            - "14:a6:8e:e5:27:28:87:50:8c:bd:06:96:1b:42:cc:e0"
       - attach_workspace:
           at: ~/project
       - run:
@@ -212,7 +239,38 @@ jobs:
             ansible-playbook -i project/.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
       #ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
       # Here's where you will add some code to rollback on failure   
-
+  
+  run-migrations:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - run:
+          name: Run migrations
+          command: |
+            cd backend
+            npm run migrations > migration_output.log
+            cat migration_output.log
+            grep "has been executed successfully" migration_output.log
+      - run:
+          name: save migration results to memstash
+          command: |
+            cd backend
+            grep "has been executed successfully" migration_output.log
+            if [ $? -eq 0 ]
+              then
+                echo "migration_${CIRCLE_WORKFLOW_ID} SUCCESS"
+                echo "migration_${CIRCLE_WORKFLOW_ID} SUCCESS" >> migration_restult.txt
+              else
+                echo "migration_${CIRCLE_WORKFLOW_ID} Fail"
+                echo "migration_${CIRCLE_WORKFLOW_ID} Fail" >> migration_restult.txt
+                exit 1
+            fi
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/backend/migration_restult.txt
+      - revert-migrations
 workflows:
   udapeople:
     jobs:
@@ -230,5 +288,10 @@ workflows:
           requires: [build-backend]
       - deploy-infrastructure:
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          filters:
+            branches:
+              only: [test-feature-branch]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
+      - run-migrations:
+          requires: [configure-infrastructure]
