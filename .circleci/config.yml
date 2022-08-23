@@ -229,7 +229,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "14:a6:8e:e5:27:28:87:50:8c:bd:06:96:1b:42:cc:e0"
+            - "2e:3d:a1:10:bc:10:7c:ac:44:8a:58:77:c5:c4:45:cb"
       - attach_workspace:
           at: ~/project
       - run:
@@ -266,9 +266,13 @@ jobs:
           name: Install aws cli
           command: |
             cd /tmp
+            pwd
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            ls
             unzip awscliv2.zip
+            ls
             sudo ./aws/install
+            aws --version
       - run:
           name: save migration results to aws ssm parameter store
           command: |
