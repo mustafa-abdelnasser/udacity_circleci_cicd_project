@@ -3,8 +3,8 @@
   file:
     path: ~/app
     state: directory
-    owner: {{ ansible_user }}
-    group: {{ ansible_user }}
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: '0755'
 
 - name: "upload backend app"
@@ -13,9 +13,23 @@
     dest: ~/app
 
 - name: "run nodejs server"
-  shell: pm2 start ~/app/backend/main.js -f
+  command: pm2 start main.js 
+  args:
+    chdir: ~/app/backend/dist
+  environment:
+    ENVIRONMENT: production
+    TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"  
+    TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
+    TYPEORM_PORT: "{{ lookup('env', 'TYPEORM_PORT')}}"
+    TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
+    TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
+    TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
+    TYPEORM_MIGRATIONS_DIR: "./migrations"
+    TYPEORM_ENTITIES: "./modules/domain/**/*.entity.js"
+    TYPEORM_MIGRATIONS: "./migrations/*.js"
 
 - name : "check if the app is running"
   shell: pm2 list
-      register: app_status
+  register: app_status
+
 - debug: msg={{app_status.stdout_lines}}

@@ -133,7 +133,7 @@ jobs:
       - persist_to_workspace:
           root: ~/
           paths:
-            - project/myapp.tar.gz
+            - myapp.tar.gz
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -213,9 +213,9 @@ jobs:
             aws ssm put-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID} \
               --type "String" --tier Standard --value ${BACKEND_URL}
       - persist_to_workspace:
-          root: ~/
+          root: ~/project
           paths:
-            - project/.circleci/ansible/inventory.txt
+            - .circleci/ansible/inventory.txt
       - destroy-environment
 
   configure-infrastructure:
@@ -241,7 +241,7 @@ jobs:
             cat .circleci/ansible/inventory.txt
             echo "check project"
             cat project/.circleci/ansible/inventory.txt
-            ansible-playbook -i project/.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
+            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
       # - destroy-environment   
   
   run-migrations:
@@ -362,6 +362,7 @@ jobs:
       - run:
           name: Deploy backend
           command: |
+            cat .circleci/ansible/inventory.txt
             pwd
             ls -lh ~/project/myapp.tar.gz
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml

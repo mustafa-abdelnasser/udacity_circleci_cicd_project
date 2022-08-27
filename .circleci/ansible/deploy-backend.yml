@@ -8,6 +8,7 @@
     - ansible_stdout_callback: yaml
 
   environment:
+    - ENVIRONMENT: production
     - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"  
     - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
     - TYPEORM_PORT: "{{ lookup('env', 'TYPEORM_PORT')}}"
@@ -20,3 +21,7 @@
 
   roles:
     - deploy
+
+  post_tasks:
+      - name: "check environment variables"
+        shell: env | grep TYPEORM
