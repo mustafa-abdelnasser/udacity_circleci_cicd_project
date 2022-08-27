@@ -1,1 +1,21 @@
 ---
+- name: "create app directory at ~"
+  file:
+    path: ~/app
+    state: directory
+    owner: {{ ansible_user }}
+    group: {{ ansible_user }}
+    mode: '0755'
+
+- name: "upload backend app"
+  unarchive:
+    src: ~/project/myapp.tar.gz
+    dest: ~/app
+
+- name: "run nodejs server"
+  shell: pm2 start ~/app/backend/main.js -f
+
+- name : "check if the app is running"
+  shell: pm2 list
+      register: app_status
+- debug: msg={{app_status.stdout_lines}}

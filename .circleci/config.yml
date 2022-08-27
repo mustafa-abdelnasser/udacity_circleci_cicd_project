@@ -120,8 +120,20 @@ jobs:
       - save_cache:
           paths: 
             - backend/node_modules
-            - backend/dist
           key: backend-build002
+      - run:
+          name: tar backend
+          command: |
+            id
+            cp -r ./backend/node_modules  ./backend/dist
+            ls ./backend/dist
+            tar -czf myapp.tar.gz ./backend/dist
+            pwd
+            ls -lh myapp.tar.gz
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/myapp.tar.gz
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -186,40 +198,24 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            yum install -y openssh-client ca-certificates tar gzip git curl wget
+            yum install -y tar gzip git curl wget
       - run:
-          name: Add back-end ip to ansible inventory
+          name: Backend IP to ansible inventory & SSM
           command: |
             pwd
-            ec2TagValue="backend-${CIRCLE_WORKFLOW_ID}"
-            aws ec2 describe-instances \
-              --query 'Reservations[*].Instances[*].PublicDnsName' \
-              --filters "Name=tag:Name,Values=$ec2TagValue" \
-              --output text >> .circleci/ansible/inventory.txt
-            cat .circleci/ansible/inventory.txt
-      - run:
-          name: get backend server url
-          command: |
-            ec2TagValue="backend-${CIRCLE_WORKFLOW_ID}"
-            aws ec2 describe-instances \
-              --query 'Reservations[*].Instances[*].PublicDnsName' \
-              --filters "Name=tag:Name,Values=$ec2TagValue" \
-              --output text > backend-domain-${CIRCLE_WORKFLOW_ID}.txt
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - project/.circleci/ansible/inventory.txt
-            - project/backend-domain-${CIRCLE_WORKFLOW_ID}.txt
-      - run:
-          name: Save backend server url to AWS SSM
-          command: |
             ec2TagValue="backend-${CIRCLE_WORKFLOW_ID}"
             BACKEND_URL=$(aws ec2 describe-instances \
               --query 'Reservations[*].Instances[*].PublicDnsName' \
               --filters "Name=tag:Name,Values=$ec2TagValue" \
               --output text)
+            echo ${BACKEND_URL} >> .circleci/ansible/inventory.txt
+            cat .circleci/ansible/inventory.txt
             aws ssm put-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID} \
-              --type "String" --tier Standard --value $BACKEND_URL
+              --type "String" --tier Standard --value ${BACKEND_URL}
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/.circleci/ansible/inventory.txt
       - destroy-environment
 
   configure-infrastructure:
@@ -229,7 +225,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "67:fa:90:1b:ae:5a:5e:7c:6f:4d:e1:4c:73:87:4e:d6"
+            - "44:5f:99:33:6d:00:f0:ff:88:50:bc:20:9e:6d:ea:97"
       - attach_workspace:
           at: ~/project
       - run:
@@ -246,22 +242,13 @@ jobs:
             echo "check project"
             cat project/.circleci/ansible/inventory.txt
             ansible-playbook -i project/.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
-      #ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
-      # Here's where you will add some code to rollback on failure   
+      # - destroy-environment   
   
   run-migrations:
     docker:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - run:
-          name: Run migrations
-          command: |
-            cd backend
-            npm install
-            npm run migrations > migration_output.log
-            cat migration_output.log
-            grep "has been executed successfully" migration_output.log
       - run:
           name: Install aws cli
           command: |
@@ -276,6 +263,14 @@ jobs:
             sudo ./aws/install
             aws --version
       - run:
+          name: Run migrations
+          command: |
+            cd backend
+            npm install
+            npm run migrations > migration_output.log
+            cat migration_output.log
+            grep "has been executed successfully" migration_output.log
+      - run:
           name: save migration results to aws ssm parameter store
           command: |
             cd backend
@@ -284,12 +279,129 @@ jobs:
               then
                 echo "migration_${CIRCLE_WORKFLOW_ID} SUCCESS"
                 aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "SUCCESS"
+                exit 0
               else
-                echo "migration_${CIRCLE_WORKFLOW_ID} Fail"
-                aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "FAIL"
-                exit 1
+                grep "No migrations are pending"
+                if [ $? -eq 0 ]
+                  then
+                    echo "migration_${CIRCLE_WORKFLOW_ID} NoMigrationPending"
+                    aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "NoMigrationPending"
+                    exit 0
+                  else
+                    echo "migration_${CIRCLE_WORKFLOW_ID} Fail"
+                    aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "FAIL"
+                    exit 1
+                fi
             fi
-      - revert-migrations
+          when: always
+      # - revert-migrations
+  deploy-frontend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - run:
+          name: Install aws cli
+          command: |
+            apt-get update
+            apt-get install less
+            cd /tmp
+            pwd
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            ls
+            unzip awscliv2.zip
+            ls
+            sudo ./aws/install
+            aws --version  
+      - run:
+          name: Install dependencies
+          command: |
+            cd frontend
+            npm install
+      - run:
+          name: Get backend url
+          command: |
+            BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
+            export API_URL="http://${BACKEND}:3030"
+            echo "${API_URL}"
+            aws ssm put-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "${API_URL}"
+      - run:
+          name: build frontend with API_URL
+          command: |
+            echo "API_URL: ${API_URL}"
+            cd frontend
+            npm install
+            npm run build
+      - run:
+          name: Deploy frontend objects
+          command: |
+            aws s3 cp --recursive frontend/dist/ s3://udapeople-${CIRCLE_WORKFLOW_ID}
+      - run:
+          name: frontend URL
+          command: |
+            FRONTEND_URL=http://udapeople-${CIRCLE_WORKFLOW_ID}.s3-website-${AWS_DEFAULT_REGION}.amazonaws.com
+            echo "Frontend URL:"
+            echo ${FRONTEND_URL}
+            aws ssm put-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "${FRONTEND_URL}"
+      # - destroy-environment    
+                    
+  deploy-backend:
+    docker:
+      - image: circleci/python:3.9
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "44:5f:99:33:6d:00:f0:ff:88:50:bc:20:9e:6d:ea:97"
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Install ansible
+          command: |
+            pip install ansible
+      - run:
+          name: Deploy backend
+          command: |
+            pwd
+            ls -lh ~/project/myapp.tar.gz
+            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
+      # - destroy-environment  
+  
+  smoke_test:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - run:
+          name: Test Backend
+          command: |
+            API_URL=$(aws ssm get-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text))
+            curl ${API_URL}
+      - run:
+          name: Test Frontend
+          command: |
+            FRONTEND_URL=$(aws ssm get-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text))
+            curl ${FRONTEND_URL}
+      # - destroy-environment
+
+  cloudfront-update:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            yum install -y tar gzip git curl wget
+      - run:
+          name: Update cloudfront distribution
+          command: |
+            aws cloudformation deploy \
+              --template-file .circleci/files/cloudfront.yml \
+              --tags project=UdaPeople-project-cloudfront \
+              --stack-name --stack-name udapeople-cloudfront \
+              --parameter-overrides WorkflowID=${CIRCLE_WORKFLOW_ID}
+      # - aws cloudfromation rollback 
+
 workflows:
   udapeople:
     jobs:
@@ -311,3 +423,11 @@ workflows:
           requires: [deploy-infrastructure]
       - run-migrations:
           requires: [configure-infrastructure]
+      - deploy-frontend:
+          requires: [run-migrations]
+      - deploy-backend:
+          requires: [run-migrations]
+      - smoke-test:
+          requires: [deploy-backend, deploy-frontend]
+      - cloudfront-update:
+          requires: [smoke-test]
