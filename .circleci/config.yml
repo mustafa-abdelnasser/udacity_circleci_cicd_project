@@ -239,8 +239,6 @@ jobs:
             ls
             echo "check .circleci/ansible/inventory.txt"
             cat .circleci/ansible/inventory.txt
-            echo "check project"
-            cat project/.circleci/ansible/inventory.txt
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
       # - destroy-environment   
   
