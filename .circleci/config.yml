@@ -367,7 +367,7 @@ jobs:
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
       # - destroy-environment  
   
-  smoke_test:
+  smoke-test:
     docker:
       - image: amazon/aws-cli
     steps:
