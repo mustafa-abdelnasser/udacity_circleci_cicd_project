@@ -131,7 +131,7 @@ jobs:
             pwd
             ls -lh myapp.tar.gz
       - persist_to_workspace:
-          root: ~/
+          root: ~/project
           paths:
             - myapp.tar.gz
       - slack/notify:
