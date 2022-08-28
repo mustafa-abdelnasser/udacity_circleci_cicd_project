@@ -272,15 +272,14 @@ jobs:
           name: save migration results to aws ssm parameter store
           command: |
             cd backend
-            grep "has been executed successfully" migration_output.log
-            if [ $? -eq 0 ]
+
+            if grep "has been executed successfully" migration_output.log
               then
                 echo "migration_${CIRCLE_WORKFLOW_ID} SUCCESS"
                 aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "SUCCESS"
                 exit 0
               else
-                grep "No migrations are pending"
-                if [ $? -eq 0 ]
+                if grep "No migrations are pending" migration_output.log
                   then
                     echo "migration_${CIRCLE_WORKFLOW_ID} NoMigrationPending"
                     aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "NoMigrationPending"
