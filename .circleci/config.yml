@@ -267,7 +267,6 @@ jobs:
             npm install
             npm run migrations > migration_output.log
             cat migration_output.log
-            grep "has been executed successfully" migration_output.log
       - run:
           name: save migration results to aws ssm parameter store
           command: |
