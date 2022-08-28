@@ -225,7 +225,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "44:5f:99:33:6d:00:f0:ff:88:50:bc:20:9e:6d:ea:97"
+            - "58:21:33:a1:0f:f1:c5:6d:b4:06:38:f8:c8:d0:de:54"
       - attach_workspace:
           at: ~/project
       - run:
@@ -272,22 +272,18 @@ jobs:
           name: save migration results to aws ssm parameter store
           command: |
             cd backend
-
             if grep "has been executed successfully" migration_output.log
               then
                 echo "migration_${CIRCLE_WORKFLOW_ID} SUCCESS"
                 aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "SUCCESS"
-                exit 0
               else
                 if grep "No migrations are pending" migration_output.log
                   then
                     echo "migration_${CIRCLE_WORKFLOW_ID} NoMigrationPending"
                     aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "NoMigrationPending"
-                    exit 0
                   else
                     echo "migration_${CIRCLE_WORKFLOW_ID} Fail"
                     aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "FAIL"
-                    exit 1
                 fi
             fi
           when: always
@@ -349,7 +345,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "44:5f:99:33:6d:00:f0:ff:88:50:bc:20:9e:6d:ea:97"
+            - "58:21:33:a1:0f:f1:c5:6d:b4:06:38:f8:c8:d0:de:54"
       - attach_workspace:
           at: ~/project
       - run:
