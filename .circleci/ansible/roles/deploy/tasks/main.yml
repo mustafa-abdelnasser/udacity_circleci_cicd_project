@@ -27,6 +27,10 @@
     TYPEORM_MIGRATIONS_DIR: "./migrations"
     TYPEORM_ENTITIES: "./modules/domain/**/*.entity.js"
     TYPEORM_MIGRATIONS: "./migrations/*.js"
+  register: app_start
+
+- debug: msg={{app_start.stdout_lines}}
+
 
 - name : "check if the app is running"
   shell: pm2 list

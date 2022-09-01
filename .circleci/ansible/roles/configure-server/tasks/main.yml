@@ -7,7 +7,7 @@
 - name: "upgrade packages"
   become: true
   apt:
-    upgrade: yes
+    upgrade: no
 
 - name : "set up node as web server"
   become: true

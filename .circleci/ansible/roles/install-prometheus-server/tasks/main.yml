@@ -1,0 +1,201 @@
+- name: "download prometheus server package"
+  become: true
+  unarchive:
+    src: https://github.com/prometheus/prometheus/releases/download/v2.37.0/prometheus-2.37.0.linux-amd64.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: "create prometheus user"
+  become: true
+  user:
+    name: prometheus
+    create_home: no
+    shell: /bin/false
+    system: yes
+    state: present
+
+- name: "create prometheus config dir /etc/prometheus"
+  become: true
+  ansible.builtin.file:
+    path: /etc/prometheus
+    owner: prometheus
+    group: prometheus
+    state: directory
+    mode: '0755'
+
+- name: "create prometheus config dir /etc/prometheus/rules"
+  become: true
+  ansible.builtin.file:
+    path: /etc/prometheus/rules
+    owner: prometheus
+    group: prometheus
+    state: directory
+    mode: '0755'
+
+- name: copy alerts rules
+  become: true
+  ansible.builtin.copy:
+    src: node_alerts.yml
+    dest: /etc/prometheus/rules
+    owner: prometheus
+    group: prometheus
+
+- name: copy prometheus consoles
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/prometheus-2.37.0.linux-amd64/consoles
+    dest: /etc/prometheus
+    owner: prometheus
+    group: prometheus
+    remote_src: yes
+
+- name: copy prometheus console_libraries
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/prometheus-2.37.0.linux-amd64/console_libraries
+    dest: /etc/prometheus
+    owner: prometheus
+    group: prometheus
+    remote_src: yes
+
+- name: prometheus config prometheus.yml
+  become: true
+  template:
+    src: prometheus.j2
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+    backup: yes
+
+- name: copy prometheus binary
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/prometheus-2.37.0.linux-amd64/prometheus
+    dest: /usr/local/bin
+    remote_src: yes
+    mode: '0777'
+
+- name: copy promtool binary
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/prometheus-2.37.0.linux-amd64/promtool
+    dest: /usr/local/bin
+    remote_src: yes
+    mode: '0777'
+
+- name: "create prometheus data dir /var/lib/prometheus"
+  become: true
+  ansible.builtin.file:
+    path: /var/lib/prometheus
+    owner: prometheus
+    group: prometheus
+    state: directory
+    mode: '0755'
+
+- name: "add prometheus service systemd"
+  become: true
+  copy:
+    src: prometheus.service
+    dest: /etc/systemd/system/
+
+- name: "enable prometheus service"
+  become: true
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: prometheus
+    enabled: yes
+
+
+
+- name: "download alert manager package"
+  become: true
+  unarchive:
+    src: https://github.com/prometheus/alertmanager/releases/download/v0.24.0/alertmanager-0.24.0.linux-amd64.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: "create alertmanager user"
+  become: true
+  user:
+    name: alertmanager
+    create_home: no
+    shell: /bin/false
+    system: yes
+    state: present
+
+- name: "create alertmanager config dir /etc/alertmanager"
+  become: true
+  ansible.builtin.file:
+    path: /etc/alertmanager
+    owner: alertmanager
+    group: alertmanager
+    state: directory
+    mode: '0755'
+
+- name: copy alertmanager config alertmanager.yml
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/alertmanager-0.24.0.linux-amd64/alertmanager.yml
+    dest: /etc/alertmanager
+    owner: alertmanager
+    group: alertmanager
+    remote_src: yes
+
+- name: copy alertmanager binary
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/alertmanager-0.24.0.linux-amd64/alertmanager
+    dest: /usr/local/bin
+    remote_src: yes
+    mode: '0777'
+
+
+- name: "create alertmanager config dir /etc/amtool"
+  become: true
+  ansible.builtin.file:
+    path: /etc/amtool
+    owner: alertmanager
+    group: alertmanager
+    state: directory
+    mode: '0755'
+
+- name: copy amtool binary
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/alertmanager-0.24.0.linux-amd64/amtool
+    dest: /usr/local/bin
+    remote_src: yes
+    mode: '0777'
+
+- name: copy amtool config.yml
+  become: true
+  ansible.builtin.copy:
+    src: config.yml
+    dest: /etc/alertmanager
+    owner: alertmanager
+    group: alertmanager
+
+
+- name: "create alertmanager data dir /var/lib/alertmanager"
+  become: true
+  ansible.builtin.file:
+    path: /var/lib/alertmanager
+    owner: alertmanager
+    group: alertmanager
+    state: directory
+    mode: '0755'
+
+- name: "add alertmanager service systemd"
+  become: true
+  copy:
+    src: alertmanager.service
+    dest: /etc/systemd/system/
+
+- name: "enable alertmanager service"
+  become: true
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: alertmanager
+    enabled: yes

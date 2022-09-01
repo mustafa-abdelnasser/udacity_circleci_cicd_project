@@ -225,7 +225,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "58:21:33:a1:0f:f1:c5:6d:b4:06:38:f8:c8:d0:de:54"
+            - "60:63:ba:4d:f3:45:e8:b0:e4:67:3f:a7:be:3e:be:f9"
       - attach_workspace:
           at: ~/project
       - run:
@@ -240,7 +240,7 @@ jobs:
             echo "check .circleci/ansible/inventory.txt"
             cat .circleci/ansible/inventory.txt
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
-      # - destroy-environment   
+      - destroy-environment   
   
   run-migrations:
     docker:
@@ -286,7 +286,7 @@ jobs:
                 fi
             fi
           when: always
-      # - revert-migrations
+      - revert-migrations
   deploy-frontend:
     docker:
       - image: circleci/node:13.8.0
@@ -335,7 +335,7 @@ jobs:
             echo "Frontend URL:"
             echo ${FRONTEND_URL}
             aws ssm put-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "${FRONTEND_URL}"
-      # - destroy-environment    
+      - destroy-environment    
                     
   deploy-backend:
     docker:
@@ -344,7 +344,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "58:21:33:a1:0f:f1:c5:6d:b4:06:38:f8:c8:d0:de:54"
+            - "60:63:ba:4d:f3:45:e8:b0:e4:67:3f:a7:be:3e:be:f9"
       - attach_workspace:
           at: ~/project
       - run:
@@ -357,24 +357,36 @@ jobs:
             cat .circleci/ansible/inventory.txt
             pwd
             ls -lh ~/project/myapp.tar.gz
+            BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
-      # - destroy-environment  
+      - destroy-environment
   
   smoke-test:
     docker:
       - image: amazon/aws-cli
     steps:
       - run:
-          name: Test Backend
+          name: Smoke Test Backend
           command: |
             API_URL=$(aws ssm get-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
             curl ${API_URL}
+            if curl -s "${API_URL}/api/status"
+              then
+                return 1
+              else
+                return 0
+            fi
       - run:
-          name: Test Frontend
+          name: Smoke Test Frontend
           command: |
             FRONTEND_URL=$(aws ssm get-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
-            curl ${FRONTEND_URL}
-      # - destroy-environment
+            if curl -s ${FRONTEND_URL} | grep "Welcome"
+              then
+                return 1
+              else
+                return 0
+            fi
+      - destroy-environment
 
   cloudfront-update:
     docker:

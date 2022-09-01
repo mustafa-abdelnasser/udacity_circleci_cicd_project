@@ -1,0 +1,41 @@
+groups:
+- name: linux-server
+  rules:
+  - alert: LinuxServerDown
+    expr: up{job="Linux Server"} == 0
+    labels:
+      severity: critical
+    annotations:
+      summary: Linux Server Down
+  - alert: HostOutOfMemory
+    expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: Host out of memory (instance {{ $labels.instance }})
+      description: "Node memory is filling up (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+  - alert: HostHighCpuLoad
+    expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
+    for: 0m
+    labels:
+      severity: warning
+    annotations:
+      summary: Host high CPU load (instance {{ $labels.instance }})
+      description: "CPU load is > 80%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+  - alert: Memory Usage > 1 %
+    expr: ( node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 1
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: Memory Usage (instance {{ $labels.instance }})
+      description: " (TestAlert) Node memory usage (> 1% )\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+  - alert: CpuLoad > 2%
+    expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 2
+    for: 0m
+    labels:
+      severity: warning
+    annotations:
+      summary: Host CPU load (instance {{ $labels.instance }})
+      description: "(TestAlert) CPU load is > 2%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"

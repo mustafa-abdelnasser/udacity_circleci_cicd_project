@@ -1,5 +1,5 @@
 ---
-- name: "configuration play." 
+- name: "deploy backend & prometheus node exporter" 
   hosts: web
   gather_facts: false
   vars:
@@ -7,21 +7,26 @@
     - ansible_host_key_checking: false
     - ansible_stdout_callback: yaml
 
-  environment:
-    - ENVIRONMENT: production
-    - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"  
-    - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
-    - TYPEORM_PORT: "{{ lookup('env', 'TYPEORM_PORT')}}"
-    - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
-    - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
-    - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
-    - TYPEORM_MIGRATIONS_DIR: "./migrations"
-    - TYPEORM_ENTITIES: "./modules/domain/**/*.entity.js"
-    - TYPEORM_MIGRATIONS: "./migrations/*.js"
-
   roles:
     - deploy
+    - configure-prometheus-node-exporter
 
-  post_tasks:
-      - name: "check environment variables"
-        shell: env | grep TYPEORM
+- name: "configure prometheus server"
+  hosts: prometheus_server
+  become: true
+  gather_facts: false
+  vars:
+    - ansible_python_interpreter: /usr/bin/python3
+    - ansible_host_key_checking: false
+    - ansible_stdout_callback: yaml
+  tasks:
+    - name: "Add new target in prometheus server configs"
+      blockinfile:
+        path: /etc/prometheus/prometheus.yml
+        block: |2
+            - job_name: "backend"
+              static_configs:
+              - targets: ['{{target}}:9100']
+
+    - name: "reload prometheus server configs"
+      command: killall -HUP prometheus
