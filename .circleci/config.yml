@@ -10,8 +10,9 @@ commands:
           name: Destroy environments
           when: on_fail
           command: |
-            aws cloudformation delete-stack --stack-name UdaPeople-Backend-${CIRCLE_WORKFLOW_ID}
-            aws cloudformation delete-stack --stack-name UdaPeople-Frontend-${CIRCLE_WORKFLOW_ID}
+            aws cloudformation delete-stack --stack-name UdaPeople-Backend-${CIRCLE_WORKFLOW_ID:0:8}
+            aws s3 rm "s3://udapeople-${CIRCLE_WORKFLOW_ID:0:8} --recursive
+            aws cloudformation delete-stack --stack-name UdaPeople-Frontend-${CIRCLE_WORKFLOW_ID:0:8}
 
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
@@ -21,7 +22,7 @@ commands:
           when: on_fail
           command: |
             # get migration status from AWS SSM Parameter store
-            MIGRATION_STATUS=$(aws ssm get-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
+            MIGRATION_STATUS=$(aws ssm get-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
 
             if [ $MIGRATION_STATUS == 'FAIL' ]
               then
@@ -183,8 +184,8 @@ jobs:
             aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
               --tags project=UdaPeople-project-backend \
-              --stack-name UdaPeople-Backend-${CIRCLE_WORKFLOW_ID} \
-              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID}
+              --stack-name UdaPeople-Backend-${CIRCLE_WORKFLOW_ID:0:8} \
+              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:8}
           no_output_timeout: 20m
       - run:
           name: Ensure front-end infrastructure exist
@@ -192,8 +193,8 @@ jobs:
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
               --tags project=UdaPeople-project-frontend \
-              --stack-name UdaPeople-Frontend-${CIRCLE_WORKFLOW_ID} \
-              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID}
+              --stack-name UdaPeople-Frontend-${CIRCLE_WORKFLOW_ID:0:8} \
+              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:8}
           no_output_timeout: 20m
       - run:
           name: Install dependencies
@@ -203,14 +204,14 @@ jobs:
           name: Backend IP to ansible inventory & SSM
           command: |
             pwd
-            ec2TagValue="backend-${CIRCLE_WORKFLOW_ID}"
+            ec2TagValue="backend-${CIRCLE_WORKFLOW_ID:0:8}"
             BACKEND_URL=$(aws ec2 describe-instances \
               --query 'Reservations[*].Instances[*].PublicDnsName' \
               --filters "Name=tag:Name,Values=$ec2TagValue" \
               --output text)
             echo ${BACKEND_URL} >> .circleci/ansible/inventory.txt
             cat .circleci/ansible/inventory.txt
-            aws ssm put-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID} \
+            aws ssm put-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID:0:8} \
               --type "String" --tier Standard --value ${BACKEND_URL}
       - persist_to_workspace:
           root: ~/project
@@ -225,7 +226,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "60:63:ba:4d:f3:45:e8:b0:e4:67:3f:a7:be:3e:be:f9"
+            - "59:9f:6a:0a:42:f6:b0:ec:b6:d7:ff:fb:da:ca:1c:ca"
       - attach_workspace:
           at: ~/project
       - run:
@@ -273,20 +274,20 @@ jobs:
             cd backend
             if grep "has been executed successfully" migration_output.log
               then
-                echo "migration_${CIRCLE_WORKFLOW_ID} SUCCESS"
-                aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "SUCCESS"
+                echo "migration_${CIRCLE_WORKFLOW_ID:0:8} SUCCESS"
+                aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID:0:8} --type "String" --tier Standard --value "SUCCESS"
               else
                 if grep "No migrations are pending" migration_output.log
                   then
-                    echo "migration_${CIRCLE_WORKFLOW_ID} NoMigrationPending"
-                    aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "NoMigrationPending"
+                    echo "migration_${CIRCLE_WORKFLOW_ID:0:8} NoMigrationPending"
+                    aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID:0:8} --type "String" --tier Standard --value "NoMigrationPending"
                   else
-                    echo "migration_${CIRCLE_WORKFLOW_ID} Fail"
-                    aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "FAIL"
+                    echo "migration_${CIRCLE_WORKFLOW_ID:0:8} Fail"
+                    aws ssm put-parameter --name udapeople_migration_${CIRCLE_WORKFLOW_ID:0:8} --type "String" --tier Standard --value "FAIL"
                 fi
             fi
           when: always
-      - revert-migrations
+      
   deploy-frontend:
     docker:
       - image: circleci/node:13.8.0
@@ -313,10 +314,10 @@ jobs:
       - run:
           name: Get backend url
           command: |
-            BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
+            BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
             export API_URL="http://${BACKEND}:3030"
             echo "${API_URL}"
-            aws ssm put-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "${API_URL}"
+            aws ssm put-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID:0:8} --type "String" --tier Standard --value "${API_URL}"
       - run:
           name: build frontend with API_URL
           command: |
@@ -327,14 +328,14 @@ jobs:
       - run:
           name: Deploy frontend objects
           command: |
-            aws s3 cp --recursive frontend/dist/ s3://udapeople-${CIRCLE_WORKFLOW_ID}
+            aws s3 cp --recursive frontend/dist/ s3://udapeople-${CIRCLE_WORKFLOW_ID:0:8}
       - run:
           name: frontend URL
           command: |
-            FRONTEND_URL=http://udapeople-${CIRCLE_WORKFLOW_ID}.s3-website-${AWS_DEFAULT_REGION}.amazonaws.com
+            FRONTEND_URL=http://udapeople-${CIRCLE_WORKFLOW_ID:0:8}.s3-website-${AWS_DEFAULT_REGION}.amazonaws.com
             echo "Frontend URL:"
             echo ${FRONTEND_URL}
-            aws ssm put-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID} --type "String" --tier Standard --value "${FRONTEND_URL}"
+            aws ssm put-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --type "String" --tier Standard --value "${FRONTEND_URL}"
       - destroy-environment    
                     
   deploy-backend:
@@ -344,7 +345,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "60:63:ba:4d:f3:45:e8:b0:e4:67:3f:a7:be:3e:be:f9"
+            - "59:9f:6a:0a:42:f6:b0:ec:b6:d7:ff:fb:da:ca:1c:ca"
       - attach_workspace:
           at: ~/project
       - run:
@@ -357,7 +358,7 @@ jobs:
             cat .circleci/ansible/inventory.txt
             pwd
             ls -lh ~/project/myapp.tar.gz
-            BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
+            BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
       - destroy-environment
   
@@ -368,25 +369,26 @@ jobs:
       - run:
           name: Smoke Test Backend
           command: |
-            API_URL=$(aws ssm get-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
+            API_URL=$(aws ssm get-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
             curl ${API_URL}
-            if curl -s "${API_URL}/api/status"
+            if curl -s "${API_URL}/api/status" | grep "ok"
               then
-                return 1
-              else
                 return 0
+              else
+                return 1
             fi
       - run:
           name: Smoke Test Frontend
           command: |
-            FRONTEND_URL=$(aws ssm get-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID} --query 'Parameter.Value' --output text)
+            FRONTEND_URL=$(aws ssm get-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
             if curl -s ${FRONTEND_URL} | grep "Welcome"
               then
                 return 1
               else
-                return 0
+                return 1
             fi
       - destroy-environment
+      - revert-migrations
 
   cloudfront-update:
     docker:
@@ -404,8 +406,36 @@ jobs:
               --template-file .circleci/files/cloudfront.yml \
               --tags project=UdaPeople-project-cloudfront \
               --stack-name udapeople-cloudfront \
-              --parameter-overrides WorkflowID=${CIRCLE_WORKFLOW_ID}
+              --parameter-overrides WorkflowID=${CIRCLE_WORKFLOW_ID:0:8}
       # - aws cloudfromation rollback
+
+  cleanup:
+      docker:
+        - image: amazon/aws-cli
+      steps:
+        - checkout
+        - run:
+            name: Get old stack workflow id
+            command: |
+              # Fetch the Old workflow ID
+              export OldWorkflowID=$(aws cloudformation \
+              list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
+              --no-paginate --output text)
+              echo OldWorkflowID: "${OldWorkflowID}"
+              echo CIRCLE_WORKFLOW_ID "${CIRCLE_WORKFLOW_ID:0:7}"
+              # Fetch the stack names          
+              export STACKS=($(aws cloudformation list-stacks --query "StackSummaries[*].StackName" \
+                      --stack-status-filter CREATE_COMPLETE --no-paginate --output text)) 
+              echo Stack names: "${STACKS[@]}"
+        - run:
+            name: Remove old stacks and files
+            command: |
+              if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
+              then
+                aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
+                aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
+                aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
+              fi
 
 workflows:
   udapeople:
@@ -424,15 +454,41 @@ workflows:
           requires: [build-backend]
       - deploy-infrastructure:
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          filters:
+            branches:
+              only: [main]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
+          filters:
+            branches:
+              only: [main]
       - run-migrations:
           requires: [configure-infrastructure]
+          filters:
+            branches:
+              only: [main]
       - deploy-frontend:
           requires: [run-migrations]
+          filters:
+            branches:
+              only: [main]
       - deploy-backend:
           requires: [run-migrations]
+          filters:
+            branches:
+              only: [main]
       - smoke-test:
           requires: [deploy-backend, deploy-frontend]
+          filters:
+            branches:
+              only: [main]
       - cloudfront-update:
           requires: [smoke-test]
+          filters:
+            branches:
+              only: [main]
+      - cleanup:
+          requires: [cloudfront-update]
+          filters:
+            branches:
+              only: [main]
