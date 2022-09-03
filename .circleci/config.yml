@@ -353,13 +353,14 @@ jobs:
           name: Install ansible
           command: |
             pip install ansible
+
       - run:
           name: Deploy backend
           command: |
             cat .circleci/ansible/inventory.txt
             pwd
             ls -lh ~/project/myapp.tar.gz
-            BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
+            #BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
       - destroy-environment
   
