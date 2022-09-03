@@ -385,7 +385,7 @@ jobs:
             FRONTEND_URL=$(aws ssm get-parameter --name udapeople_FRONTEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
             if curl -s ${FRONTEND_URL} | grep "Welcome"
               then
-                return 1
+                return 0
               else
                 return 1
             fi
