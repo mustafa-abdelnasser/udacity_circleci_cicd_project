@@ -313,16 +313,12 @@ jobs:
             cd frontend
             npm install
       - run:
-          name: Get backend url
+          name: build frontend with API_URL
           command: |
             BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
             export API_URL="http://${BACKEND}:3030"
-            echo "${API_URL}"
-            aws ssm put-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID:0:8} --type "String" --tier Standard --value "${API_URL}"
-      - run:
-          name: build frontend with API_URL
-          command: |
             echo "API_URL: ${API_URL}"
+            aws ssm put-parameter --name udapeople_API_URL_${CIRCLE_WORKFLOW_ID:0:8} --type "String" --tier Standard --value "${API_URL}"
             cd frontend
             npm install
             npm run build
@@ -446,17 +442,14 @@ jobs:
               # Fetch the Old workflow ID
               export OldWorkflowID=$(aws ssm get-parameter --name udapeople_OldWorkflowID --query 'Parameter.Value' --output text)
               echo OldWorkflowID: "${OldWorkflowID}"
-              echo CIRCLE_WORKFLOW_ID "${CIRCLE_WORKFLOW_ID:0:7}"
+              echo CIRCLE_WORKFLOW_ID "${CIRCLE_WORKFLOW_ID:0:8}"
               
               # Fetch the stack names          
               export STACKS=($(aws cloudformation list-stacks --query "StackSummaries[*].StackName" \
                       --stack-status-filter CREATE_COMPLETE --no-paginate --output text)) 
               echo Stack names: "${STACKS[@]}"
-        - run:
-            name: Remove old stacks and files
-            command: |
-              echo OldWorkflowID: "${OldWorkflowID}"
-              echo CIRCLE_WORKFLOW_ID "${CIRCLE_WORKFLOW_ID:0:7}"
+
+              # clean up old env
               if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
               then
                 echo "s3://udapeople-${OldWorkflowID}"
