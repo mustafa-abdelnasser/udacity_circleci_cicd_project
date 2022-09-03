@@ -109,7 +109,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - backend-build002
+            - backend-build0003
       - run:
           name: Back-end build
           command: |
@@ -121,7 +121,7 @@ jobs:
       - save_cache:
           paths: 
             - backend/node_modules
-          key: backend-build002
+          key: backend-build0003
       - run:
           name: tar backend
           command: |
@@ -149,7 +149,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - backend-build002
+            - backend-build0003
       - run:
           name: Back-end Test
           command: |
@@ -163,13 +163,13 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - backend-build002
+            - backend-build0003
       - run:
           name: Back-end Scan with force fix
           command: |
             cd backend
             npm install
-            #npm audit fix --audit-level=critical --force
+            npm audit fix --audit-level=critical --force
             #npm install --save-dev webpack@5.74.0
             #npm update mkdirp --depth 2
             npm audit --audit-level=critical
