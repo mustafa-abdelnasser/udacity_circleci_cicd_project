@@ -353,7 +353,19 @@ jobs:
           name: Install ansible
           command: |
             pip install ansible
-
+      - run:
+          name: Install aws cli
+          command: |
+            sudo apt-get update
+            sudo apt-get install less
+            cd /tmp
+            pwd
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            ls
+            unzip awscliv2.zip
+            ls
+            sudo ./aws/install
+            aws --version  
       - run:
           name: Deploy backend
           command: |
@@ -362,6 +374,7 @@ jobs:
             ls -lh ~/project/myapp.tar.gz
             #BACKEND=$(aws ssm get-parameter --name BACKEND_URL_${CIRCLE_WORKFLOW_ID:0:8} --query 'Parameter.Value' --output text)
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
+          no_output_timeout: 20m
       - destroy-environment
   
   smoke-test:
