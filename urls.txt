@@ -2,7 +2,10 @@
 https://github.com/mustafa-abdelnasser/udacity_circleci_cicd_project
 
 2.Public URL for your S3 Bucket (aka, your green candidate front-end) [URL02]
-http://udapeople-eb39a61d.s3-website-us-east-1.amazonaws.com/#/employees
+http://udapeople-81996f15.s3-website-us-east-1.amazonaws.com/#/employees
+screenshot attached if 
+URL02-s3-1
+URL02-s3-2
 
 CloudFront 
 http://d9uel46eogeah.cloudfront.net
