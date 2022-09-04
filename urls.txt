@@ -7,3 +7,11 @@ http://udapeople-eb39a61d.s3-website-us-east-1.amazonaws.com/#/employees
 CloudFront 
 http://d9uel46eogeah.cloudfront.net
 
+Backend API URL
+http://ec2-3-82-201-206.compute-1.amazonaws.com:3030/api/status
+
+Prometheus server
+http://ec2-54-152-224-104.compute-1.amazonaws.com:9090
+
+Alert manager
+http://ec2-54-152-224-104.compute-1.amazonaws.com:9093
