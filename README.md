@@ -55,7 +55,9 @@ For your submission, please submit the following:
   1. Only deploy on pushed to `master` branch. [SCREENSHOT10]
 ![SCREENSHOT10](SCREENSHOT10.jpg)
   1. Provide a screenshot of a graph of your EC2 instance including available memory, available disk space, and CPU usage. [SCREENSHOT11]
-![SCREENSHOT11](SCREENSHOT11.jpg)
+![SCREENSHOT11](SCREENSHOT11-cpu.jpg)
+![SCREENSHOT11](SCREENSHOT11-disk.jpg)
+![SCREENSHOT11](SCREENSHOT11-memory.jpg)
   1. Provide a screenshot of an alert that was sent by Prometheus. [SCREENSHOT12]
 ![SCREENSHOT12](SCREENSHOT12.jpg)
 
